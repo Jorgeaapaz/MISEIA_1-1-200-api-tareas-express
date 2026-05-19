@@ -1,0 +1,18 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: node:20-alpine
+  script:
+    - npm ci
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
