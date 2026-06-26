@@ -303,6 +303,12 @@ curl https://api-tareas-express.deviaaps.com/api/auth/login
 
 ---
 
+## Architecture Decision Records
+
+Structured ADRs (context / decision / alternatives / consequences) for the four key decisions in this project are in [`docs/decisions/`](docs/decisions/README.md).
+
+---
+
 ## Technical Decisions
 
 ### 1. MongoDB over a relational database
