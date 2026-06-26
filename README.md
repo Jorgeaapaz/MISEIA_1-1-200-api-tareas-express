@@ -36,7 +36,6 @@ API REST para gestión de tareas personales desarrollada con **Node.js 20**, **E
 
 | Método | Ruta | Descripción | Auth requerida |
 |--------|------|-------------|----------------|
-| `POST` | `/api/auth/register` | Registrar nuevo usuario | No |
 | `POST` | `/api/auth/login` | Autenticarse y recibir JWT | No |
 
 **Detalles técnicos:**
@@ -255,6 +254,18 @@ npm start      # Sin recarga automática
 npm run seed
 ```
 
+### Usuarios de Prueba (Producción)
+
+El seed está cargado en la base de datos de producción. Usa estas credenciales directamente contra `https://api-tareas-express.deviaaps.com`:
+
+| Usuario | Contraseña | Tareas precargadas |
+|---------|------------|-------------------|
+| `admin` | `password123` | Setup project, Authentication, Unit tests, Swagger docs, Deploy to production |
+| `user1` | `password123` | Buy groceries, Exercise, Read book, Call dentist, Review PR |
+
+> Para recargar el seed en producción: `ssh -i ~/.ssh/vboxuser gcvmuser@34.174.56.186 "docker exec api-tareas-express node src/seed/seed.js"`  
+> **Advertencia:** el seed elimina todos los usuarios y tareas existentes antes de insertar.
+
 ### Scripts Disponibles
 
 ```bash
@@ -267,65 +278,239 @@ npm run format          # Formatear código con Prettier
 
 ---
 
-## 6. Ejemplos de Salida
+## 6. Ejemplos de Producción (curl)
 
-### Caso de éxito — Registro de usuario
+> Base URL: `https://api-tareas-express.deviaaps.com`  
+> Usuarios disponibles: `admin / password123` y `user1 / password123`
+
+---
+
+### Paso 0 — Guardar el token en una variable de shell
 
 ```bash
-curl -s -X POST http://localhost:3000/api/auth/register \
+TOKEN=$(curl -s -X POST https://api-tareas-express.deviaaps.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"jorge","password":"secreto123"}'
+  -d '{"username":"admin","password":"password123"}' | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+echo $TOKEN   # eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2Njg0YTFiMCIsInVzZXJuYW1lIjoiYWRtaW4ifQ.sig",
   "expiresIn": "24h"
 }
 ```
 
-### Caso de éxito — Crear tarea
+---
+
+### GET /api/tasks — Listar tareas (paginación + filtros)
 
 ```bash
-curl -s -X POST http://localhost:3000/api/tasks \
+# Todas las tareas, página 1
+curl -s "https://api-tareas-express.deviaaps.com/api/tasks" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```bash
+# Solo tareas en progreso, ordenadas por fecha de vencimiento
+curl -s "https://api-tareas-express.deviaaps.com/api/tasks?status=in_progress&sortBy=dueDate&sortOrder=asc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```bash
+# Búsqueda de texto + prioridad alta
+curl -s "https://api-tareas-express.deviaaps.com/api/tasks?search=test&priority=high&limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": [
+    {
+      "_id": "6684a1c2f3a9b2001c8e4567",
+      "title": "Write unit tests",
+      "description": "Cover all endpoints with Jest + Supertest",
+      "status": "in_progress",
+      "priority": "high",
+      "dueDate": null,
+      "userId": "6684a1b0f3a9b2001c8e4500",
+      "createdAt": "2026-06-25T14:30:10.123Z",
+      "updatedAt": "2026-06-25T14:30:10.123Z"
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "limit": 5,
+    "pages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+---
+
+### POST /api/tasks — Crear tarea
+
+```bash
+curl -s -X POST https://api-tareas-express.deviaaps.com/api/tasks \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOi..." \
-  -d '{"title":"Preparar informe","priority":"high","dueDate":"2026-07-01T09:00:00Z"}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Preparar demo para cliente",
+    "description": "Incluir métricas de rendimiento y casos de uso",
+    "status": "pending",
+    "priority": "high",
+    "dueDate": "2026-07-15T10:00:00.000Z"
+  }'
 ```
 
 ```json
 {
   "data": {
-    "_id": "6684a1c2f3a9b2001c8e4567",
-    "title": "Preparar informe",
+    "_id": "6684b2d3a4c5e6001d9f5678",
+    "title": "Preparar demo para cliente",
+    "description": "Incluir métricas de rendimiento y casos de uso",
     "status": "pending",
     "priority": "high",
-    "dueDate": "2026-07-01T09:00:00.000Z",
+    "dueDate": "2026-07-15T10:00:00.000Z",
     "userId": "6684a1b0f3a9b2001c8e4500",
-    "createdAt": "2026-06-25T14:30:10.123Z",
-    "updatedAt": "2026-06-25T14:30:10.123Z"
+    "createdAt": "2026-06-25T18:00:00.000Z",
+    "updatedAt": "2026-06-25T18:00:00.000Z"
   }
 }
 ```
 
-### Caso de éxito — Listar con paginación y filtros
+```bash
+# Guardar el ID para los siguientes ejemplos
+TASK_ID="6684b2d3a4c5e6001d9f5678"
+```
+
+---
+
+### GET /api/tasks/:id — Obtener tarea por ID
 
 ```bash
-curl -s "http://localhost:3000/api/tasks?status=pending&priority=high&page=1&limit=5" \
-  -H "Authorization: Bearer eyJhbGciOi..."
+curl -s "https://api-tareas-express.deviaaps.com/api/tasks/$TASK_ID" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ```json
 {
-  "data": [{ "_id": "...", "title": "Preparar informe", "status": "pending", "priority": "high" }],
-  "pagination": { "total": 12, "page": 1, "limit": 5, "pages": 3, "hasNext": true, "hasPrev": false }
+  "data": {
+    "_id": "6684b2d3a4c5e6001d9f5678",
+    "title": "Preparar demo para cliente",
+    "description": "Incluir métricas de rendimiento y casos de uso",
+    "status": "pending",
+    "priority": "high",
+    "dueDate": "2026-07-15T10:00:00.000Z",
+    "userId": "6684a1b0f3a9b2001c8e4500",
+    "createdAt": "2026-06-25T18:00:00.000Z",
+    "updatedAt": "2026-06-25T18:00:00.000Z"
+  }
 }
 ```
 
-### Caso de error — Validación múltiple (422)
+---
+
+### PUT /api/tasks/:id — Reemplazar tarea completa
 
 ```bash
-curl -s -X POST http://localhost:3000/api/tasks \
+curl -s -X PUT "https://api-tareas-express.deviaaps.com/api/tasks/$TASK_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Preparar demo para cliente (revisado)",
+    "description": "Agregar sección de arquitectura y pipeline CI/CD",
+    "status": "in_progress",
+    "priority": "high",
+    "dueDate": "2026-07-20T10:00:00.000Z"
+  }'
+```
+
+```json
+{
+  "data": {
+    "_id": "6684b2d3a4c5e6001d9f5678",
+    "title": "Preparar demo para cliente (revisado)",
+    "description": "Agregar sección de arquitectura y pipeline CI/CD",
+    "status": "in_progress",
+    "priority": "high",
+    "dueDate": "2026-07-20T10:00:00.000Z",
+    "userId": "6684a1b0f3a9b2001c8e4500",
+    "createdAt": "2026-06-25T18:00:00.000Z",
+    "updatedAt": "2026-06-25T18:30:00.000Z"
+  }
+}
+```
+
+---
+
+### PATCH /api/tasks/:id — Actualización parcial
+
+```bash
+# Marcar como completada
+curl -s -X PATCH "https://api-tareas-express.deviaaps.com/api/tasks/$TASK_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"status": "completed"}'
+```
+
+```json
+{
+  "data": {
+    "_id": "6684b2d3a4c5e6001d9f5678",
+    "title": "Preparar demo para cliente (revisado)",
+    "description": "Agregar sección de arquitectura y pipeline CI/CD",
+    "status": "completed",
+    "priority": "high",
+    "dueDate": "2026-07-20T10:00:00.000Z",
+    "userId": "6684a1b0f3a9b2001c8e4500",
+    "createdAt": "2026-06-25T18:00:00.000Z",
+    "updatedAt": "2026-06-25T18:45:00.000Z"
+  }
+}
+```
+
+---
+
+### DELETE /api/tasks/:id — Eliminar tarea
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+  "https://api-tareas-express.deviaaps.com/api/tasks/$TASK_ID" \
+  -H "Authorization: Bearer $TOKEN"
+# → 204
+```
+
+Retorna `204 No Content` (sin body) en caso de éxito.
+
+---
+
+### Casos de error
+
+```bash
+# 401 — sin token
+curl -s https://api-tareas-express.deviaaps.com/api/tasks
+```
+```json
+{ "error": "Unauthorized", "message": "No token provided" }
+```
+
+```bash
+# 401 — token expirado o inválido
+curl -s https://api-tareas-express.deviaaps.com/api/tasks \
+  -H "Authorization: Bearer token.invalido.aqui"
+```
+```json
+{ "error": "Unauthorized", "message": "Invalid or expired token" }
+```
+
+```bash
+# 422 — validación múltiple
+curl -s -X POST https://api-tareas-express.deviaaps.com/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOi..." \
   -d '{"title":"","status":"invalido","dueDate":"no-es-fecha"}'
@@ -345,18 +530,18 @@ curl -s -X POST http://localhost:3000/api/tasks \
 }
 ```
 
-### Caso de error — Sin autenticación (401)
+```bash
+# 403 — tarea de otro usuario
+curl -s "https://api-tareas-express.deviaaps.com/api/tasks/000000000000000000000001" \
+  -H "Authorization: Bearer $TOKEN"
+```
+```json
+{ "error": "Forbidden", "message": "Access denied" }
+```
 
 ```bash
-curl -s http://localhost:3000/api/tasks
+# 429 — rate limit superado (más de 100 req en 15 min)
 ```
-
-```json
-{ "error": "Unauthorized", "message": "No token provided" }
-```
-
-### Caso de error — Límite de tasa excedido (429)
-
 ```json
 { "error": "TooManyRequests", "message": "Too many requests, please try again later" }
 ```
