@@ -24,6 +24,11 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Create deploy directory on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} \
+            "mkdir -p ~/MISEIA200_api-tareas-express"
+
       - name: Transfer image to VM
         run: |
           scp -i ~/.ssh/deploy_key api-tareas-express.tar \
