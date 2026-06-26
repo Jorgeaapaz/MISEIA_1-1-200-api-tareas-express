@@ -1,0 +1,11 @@
+node_modules/
+coverage/
+.env
+.env.*
+!.env.example
+tests/
+vid/
+docs/
+*.md
+.git/
+.gitignore
