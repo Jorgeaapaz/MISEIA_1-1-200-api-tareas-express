@@ -208,3 +208,7 @@ curl -s -X POST http://localhost:3000/api/tasks \
   }
 }
 ```
+
+## Updates — 2026-06-25
+
+- Added `vid/` to `.gitignore` to exclude local video recordings from version control.
