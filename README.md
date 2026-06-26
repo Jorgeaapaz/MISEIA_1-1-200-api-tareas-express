@@ -114,14 +114,19 @@ cd 1-1-200-api-tareas-express
 
 ### Environment variables
 
-Create a `.env` file in the project root:
+Copy the provided template and fill in your values:
 
-```env
-MONGODB_URI=mongodb://localhost:27017/tareas_db
-JWT_SECRET=supersecretkey
-JWT_EXPIRES_IN=24h
-PORT=3000
+```bash
+cp .env.example .env
 ```
+
+| Variable | Description | Example |
+|---|---|---|
+| `PORT` | Express server port | `3000` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/tareas_db` |
+| `JWT_SECRET` | Secret for signing JWTs — use a long random string in production | `your_jwt_secret_here` |
+| `JWT_EXPIRES_IN` | JWT expiration duration | `24h` |
+| `NODE_ENV` | Runtime environment | `development` |
 
 ### Install & run
 
