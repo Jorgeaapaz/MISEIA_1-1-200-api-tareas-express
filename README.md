@@ -240,6 +240,57 @@ curl -s -X POST http://localhost:3000/api/tasks \
 }
 ```
 
+## Deploy
+
+The app is containerised and deployed to a GCP VM behind Traefik.  
+**Public URL:** `https://api-tareas-express.deviaaps.com`
+
+### Prerequisites
+- Docker installed locally and on the VM
+- SSH access: `ssh -i C:\ubuntuiso\.ssh\vboxuser gcvmuser@34.174.56.186`
+- Traefik v3.3 running on the VM (`miseia-net` Docker network, wildcard cert `*.deviaaps.com`)
+
+### 1. Build the image locally
+```bash
+docker build -t api-tareas-express:latest .
+```
+
+### 2. Transfer the image to the VM
+```bash
+docker save api-tareas-express:latest | ssh -i C:\ubuntuiso\.ssh\vboxuser gcvmuser@34.174.56.186 "docker load"
+```
+
+### 3. Create `.env.prod` on the VM
+```bash
+ssh -i C:\ubuntuiso\.ssh\vboxuser gcvmuser@34.174.56.186
+mkdir -p ~/MISEIA200_api-tareas-express && cd ~/MISEIA200_api-tareas-express
+cat > .env.prod <<'EOF'
+PORT=3000
+MONGODB_URI=mongodb://admin:MongoAdmin2024!@mongodb:27017/tareas_db?authSource=admin
+JWT_SECRET=<your_production_secret>
+JWT_EXPIRES_IN=24h
+NODE_ENV=production
+EOF
+```
+
+### 4. Start the service
+```bash
+# Copy docker-compose.prod.yml to the VM first
+scp -i C:\ubuntuiso\.ssh\vboxuser docker-compose.prod.yml gcvmuser@34.174.56.186:~/MISEIA200_api-tareas-express/
+
+# On the VM
+cd ~/MISEIA200_api-tareas-express
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### 5. Verify
+```bash
+curl https://api-tareas-express.deviaaps.com/api/auth/login
+# Expected: {"error":"ValidationError",...} — server is up
+```
+
+---
+
 ## Technical Decisions
 
 ### 1. MongoDB over a relational database

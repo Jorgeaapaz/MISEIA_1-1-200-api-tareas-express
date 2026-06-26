@@ -1,0 +1,19 @@
+services:
+  api-tareas-express:
+    image: api-tareas-express:latest
+    container_name: api-tareas-express
+    restart: unless-stopped
+    env_file: .env.prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-tareas.rule=Host(`api-tareas-express.deviaaps.com`)"
+      - "traefik.http.routers.api-tareas.entrypoints=websecure"
+      - "traefik.http.routers.api-tareas.tls=true"
+      - "traefik.http.routers.api-tareas.tls.certresolver=cloudflare"
+      - "traefik.http.services.api-tareas-svc.loadbalancer.server.port=3000"
+    networks:
+      - miseia-net
+
+networks:
+  miseia-net:
+    external: true
