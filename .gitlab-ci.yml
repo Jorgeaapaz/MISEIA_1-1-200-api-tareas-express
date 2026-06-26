@@ -34,8 +34,11 @@ test:
   stage: test
   image: node:20
   needs: [lint]
+  services:
+    - mongo:7
   variables:
     NODE_ENV: test
+    MONGODB_URI: mongodb://mongo/test_db
   script:
     - npm test
   artifacts:
