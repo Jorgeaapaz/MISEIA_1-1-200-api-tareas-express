@@ -1,5 +1,7 @@
 # api-tareas-express
 
+![Coverage](https://img.shields.io/badge/coverage-%3E80%25-brightgreen) ![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen) ![Node](https://img.shields.io/badge/node-20-green)
+
 > Node.js 20 + Express 4 REST API for task management with JWT authentication, MongoDB persistence, Swagger UI, and rate limiting.
 
 ---
@@ -180,6 +182,16 @@ npm run test:coverage # with coverage report
 ```
 
 Tests use `mongodb-memory-server` — no external MongoDB needed.
+
+#### Coverage
+
+Thresholds enforced in `jest.config.js`: **≥80% lines/functions/statements, ≥75% branches**.  
+To generate a local HTML report:
+
+```bash
+npm run test:coverage
+# open coverage/lcov-report/index.html
+```
 
 ---
 
