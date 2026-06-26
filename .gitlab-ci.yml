@@ -32,7 +32,7 @@ lint:
 
 test:
   stage: test
-  image: node:20-alpine
+  image: node:20
   needs: [lint]
   variables:
     NODE_ENV: test
