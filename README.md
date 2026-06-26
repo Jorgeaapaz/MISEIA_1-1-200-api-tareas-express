@@ -67,6 +67,32 @@ api-tareas-express/
 - **Repository-lite via Mongoose** — all DB access goes through Mongoose model methods (`find`, `findById`, `create`, `save`, `deleteOne`), keeping controllers decoupled from raw MongoDB queries.
 - **Factory / app separation** — `server.js` exports the configured Express `app` without starting it, enabling `supertest` to import the app in tests without binding a port.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Client -->|HTTPS| Traefik
+    Traefik -->|HTTP :3000| RateLimit
+
+    subgraph Express["Express App (server.js)"]
+        RateLimit["Rate Limiter\n100 req / 15 min"]
+        Router["Router"]
+        AuthMW["auth.middleware\nJWT verify → req.user"]
+        AuthCtrl["auth.controller\nlogin + JWT sign"]
+        TasksCtrl["tasks.controller\nCRUD scoped to userId"]
+
+        RateLimit --> Router
+        Router -->|"POST /api/auth/login\n(public)"| AuthCtrl
+        Router -->|"/api/tasks/*\n(protected)"| AuthMW --> TasksCtrl
+    end
+
+    AuthCtrl --> Mongoose
+    TasksCtrl --> Mongoose
+    Mongoose["Mongoose ODM\nUser · Task models"] --> MongoDB[(MongoDB)]
+
+    Express -.-|"GET /api-docs"| SwaggerUI["Swagger UI"]
+```
+
 ---
 
 ## How It Works
