@@ -212,3 +212,7 @@ curl -s -X POST http://localhost:3000/api/tasks \
 ## Updates — 2026-06-25
 
 - Added `vid/` to `.gitignore` to exclude local video recordings from version control.
+- Added evaluation artifacts to `docs/compliance/`:
+  - `compliance-report-2026-06-25.md` — full pass/fail assessment against evaluation rubric
+  - `pert-compliance-plan-2026-06-25.md` — dependency-ordered remediation plan
+  - `[001]`–`[009]` disciplined prompt files for each non-compliant item
