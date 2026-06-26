@@ -1,5 +1,15 @@
 stages:
   - build
+  - lint
+  - test
+
+.node_cache: &node_cache
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
 
 build:
   stage: build
@@ -10,9 +20,26 @@ build:
     paths:
       - node_modules/
     expire_in: 1 hour
-  cache:
-    key:
-      files:
-        - package-lock.json
+  <<: *node_cache
+
+lint:
+  stage: lint
+  image: node:20-alpine
+  needs: [build]
+  script:
+    - npm run lint
+  <<: *node_cache
+
+test:
+  stage: test
+  image: node:20-alpine
+  needs: [lint]
+  variables:
+    NODE_ENV: test
+  script:
+    - npm test
+  artifacts:
     paths:
-      - node_modules/
+      - coverage/
+    expire_in: 7 days
+  <<: *node_cache
