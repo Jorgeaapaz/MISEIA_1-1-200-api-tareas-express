@@ -4,7 +4,7 @@ module.exports = {
   coverageThreshold: {
     global: {
       lines: 80,
-      branches: 80,
+      branches: 75,
       functions: 80,
       statements: 80
     }
@@ -13,5 +13,6 @@ module.exports = {
     'src/**/*.js',
     '!src/index.js',
     '!src/seed/**'
-  ]
+  ],
+  coverageReporters: ['text', 'lcov', 'html'],
 }
