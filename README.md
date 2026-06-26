@@ -240,6 +240,48 @@ curl -s -X POST http://localhost:3000/api/tasks \
 }
 ```
 
+## Technical Decisions
+
+### 1. MongoDB over a relational database
+**Decision:** MongoDB 7 via Mongoose 8 ODM.  
+**Alternatives considered:** PostgreSQL + Sequelize, SQLite.  
+**Reason:** Task documents have a predictable shape with no cross-entity joins required — user scoping is handled by an embedded `userId` reference. MongoDB's schemaless flexibility let us iterate on the Task schema (adding `priority`, `dueDate`) during development without writing migration files. For a CRUD API with a single owning relationship, MongoDB is a better fit than a relational model with foreign key constraints and migration tooling overhead.
+
+### 2. CommonJS (`require`) over ES Modules
+**Decision:** CommonJS (`require`/`module.exports`) throughout the project.  
+**Alternatives considered:** `import`/`export` with `"type": "module"` in `package.json`.  
+**Reason:** Jest 29 requires the `--experimental-vm-modules` flag plus a Babel or esbuild transform pipeline to run ESM natively in Node 20. Keeping CommonJS eliminates that configuration entirely — `npm test` runs as-is with zero transform config. The trade-off is that the codebase will need migration once Jest fully stabilises ESM support (expected Jest 30).
+
+### 3. Stateless JWT over server-side sessions
+**Decision:** JWT signed with HS256, 24 h expiry, stored and sent by the client.  
+**Alternatives considered:** `express-session` + Redis session store, Passport.js with persistent sessions.  
+**Reason:** Stateless JWT requires no session store, keeping the server horizontally scalable without a shared Redis dependency. For a task management tool, the inability to invalidate a token before expiry (a known JWT limitation) is acceptable — the worst-case exposure window is 24 h, and there is no high-value action (e.g. payment, admin escalation) that would justify the operational cost of a session store.
+
+### 4. `mongodb-memory-server` for integration tests over mocking
+**Decision:** `mongodb-memory-server` starts a real MongoDB process in-memory for each test suite run.  
+**Alternatives considered:** `jest.mock()` mocking Mongoose methods, Docker-based MongoDB service in CI, shared test database.  
+**Reason:** The in-memory server runs real Mongoose queries, which means schema constraints, index behaviour, and `$set` / `$push` operators are exercised exactly as in production. Mocking Mongoose would silently pass tests that would fail on a real database (e.g. unique index violations). Docker adds a service dependency to CI; the in-memory server avoids that while adding only ~30 s to a cold test run.
+
+---
+
+## AI Usage
+
+This project was developed with **Claude Code (claude-sonnet-4-6)** as a coding assistant.
+
+**What AI generated:**
+- Initial route and controller scaffolding (GET/POST/PUT/PATCH/DELETE structure)
+- Mongoose schema definitions for `User` and `Task`
+- Swagger JSDoc annotations for all endpoints
+- Test scaffolding for `auth.test.js` and `tasks.test.js`
+
+**What was critically reviewed and changed:**
+- **Ownership enforcement** — the AI's initial draft applied `userId` scoping only to `GET /tasks`. All mutation endpoints (PUT, PATCH, DELETE) and `GET /tasks/:id` were manually verified to return `403` when a different user's token is used, and test cases 22, 26, 31, 36 were added specifically to cover this.
+- **PATCH vs PUT semantics** — the draft treated both identically. The PATCH handler was reworked to use `{ $set: body }` so only provided fields are updated, preserving unmentioned fields. Test case 29 validates this.
+- **Validation on PATCH** — the draft skipped validation when the body was partial. The controller was updated to validate only the fields present in the request body, rejecting invalid enum values even in partial updates (test 30).
+- **Error shape consistency** — the draft returned different error structures across endpoints. All error responses were normalised to `{ error, message, details }` with explicit status codes.
+
+---
+
 ## Updates — 2026-06-25
 
 - Added `vid/` to `.gitignore` to exclude local video recordings from version control.
